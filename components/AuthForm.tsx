@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native'
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native'
 
-/**
- * Props :
- *  - type   : 'login' | 'register'
- *  - onSubmit :
- *        login     → (email, password)
- *        register  → (email, password, confirm, firstName, lastName, phone)
- */
 export default function AuthForm({
   type,
   onSubmit,
@@ -22,7 +22,6 @@ export default function AuthForm({
     phone?: string,
   ) => void
 }) {
-  /* ---- États ---- */
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -30,7 +29,6 @@ export default function AuthForm({
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
 
-  /* ---- Handler ---- */
   const handlePress = () => {
     onSubmit(
       email.trim(),
@@ -42,14 +40,19 @@ export default function AuthForm({
     )
   }
 
-  /* ---- UI ---- */
   return (
     <View style={styles.container}>
+      <Image
+        source={{
+          uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEPIHgzIIPcxP-DOsghno4c-bUS3qGjBsdcw&s',
+        }}
+        style={styles.image}
+        resizeMode="contain"
+      />
       <Text style={styles.title}>
         {type === 'login' ? 'Sign In' : 'Sign Up'}
       </Text>
 
-      {/* ---- Email & Password (communs) ---- */}
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -67,7 +70,6 @@ export default function AuthForm({
         value={password}
       />
 
-      {/* ---- Champs supplémentaires pour l’inscription ---- */}
       {type === 'register' && (
         <>
           <TextInput
@@ -104,24 +106,55 @@ export default function AuthForm({
         </>
       )}
 
-      {/* ---- Bouton principal ---- */}
-      <Button
-        title={type === 'login' ? 'Login' : 'Register'}
-        onPress={handlePress}
-      />
+      <TouchableOpacity style={styles.button} onPress={handlePress}>
+        <Text style={styles.buttonText}>
+          {type === 'login' ? 'Login' : 'Register'}
+        </Text>
+      </TouchableOpacity>
     </View>
   )
 }
 
-/* ---- Styles ---- */
 const styles = StyleSheet.create({
-  container: { padding: 24 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16 },
+  container: {
+    padding: 24,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+  },
+  image: {
+    width: 200,
+    height: 200,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 32,
+    color: '#1E293B',
+    textAlign: 'center',
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
+    
+  },
+  button: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 })

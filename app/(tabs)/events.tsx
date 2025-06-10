@@ -1,5 +1,3 @@
-/* ───── events.tsx – version prête à copier/coller ───── */
-
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -40,34 +38,28 @@ interface Evenement {
 const notify = (
   title: string,
   message: string,
-  onOk?: () => void            // callback optionnel
+  onOk?: () => void
 ) => {
   if (Platform.OS === 'web') {
-    // navigateur : simple window.alert
     window.alert(`${title}\n\n${message}`);
     onOk?.();
   } else {
-    // mobile natif
     Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
   }
 };
 
-
 /* ---------- Composant ---------- */
 export default function Event() {
-  /* --- états --- */
   const [events, setEvents] = useState<Evenement[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Evenement | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
-  /* --- Auth : récupère l’UID pour id_intervenant --- */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => setFirebaseUser(user));
     return unsub;
   }, []);
 
-  /* --- Chargement des événements --- */
   useEffect(() => {
     const fetchEvents = async () => {
       const snapshot = await getDocs(collection(db, 'evenement'));
@@ -81,7 +73,6 @@ export default function Event() {
     fetchEvents();
   }, []);
 
-  /* --- Handlers UI --- */
   const openModal = (evt: Evenement) => {
     setSelectedEvent(evt);
     setModalVisible(true);
@@ -92,11 +83,9 @@ export default function Event() {
     setSelectedEvent(null);
   };
 
-  /* --- Inscription Firestore --- */
   const handleApply = async () => {
     if (!selectedEvent || !firebaseUser) return;
-  
-    /* --- ① vérifie si l’utilisateur est déjà inscrit à cet événement --- */
+
     const dupQuery = query(
       collection(db, 'inscrire'),
       where('id_evenement', '==', selectedEvent.id),
@@ -105,10 +94,9 @@ export default function Event() {
     const dupSnap = await getDocs(dupQuery);
     if (!dupSnap.empty) {
       notify('Déjà inscrit', 'Vous êtes déjà inscrit à cet événement.');
-      return; // stoppe ici si un doc existe déjà
+      return;
     }
-  
-    /* --- ② inscription si aucune entrée trouvée --- */
+
     try {
       await addDoc(collection(db, 'inscrire'), {
         date_inscription: serverTimestamp(),
@@ -116,7 +104,7 @@ export default function Event() {
         id_intervenant: firebaseUser.uid,
         statut: 'en attente',
       });
-  
+
       notify('Inscription envoyée', 'Votre inscription est enregistrée.', closeModal);
       closeModal();
     } catch (e) {
@@ -124,24 +112,34 @@ export default function Event() {
       Alert.alert('Erreur', "Une erreur s'est produite lors de l'inscription.");
     }
   };
-  
 
-  /* --- Render --- */
   const renderItem = ({ item }: { item: Evenement }) => (
-    <TouchableOpacity onPress={() => openModal(item)} activeOpacity={0.8}>
-      <View style={styles.itemContainer}>
-        <Text style={styles.title}>{item.titre}</Text>
-        <Text style={styles.dates}>
-          {new Date(item.date_evenement.seconds * 1000).toLocaleDateString()} —{' '}
-          {item.lieu}
-        </Text>
+    <TouchableOpacity onPress={() => openModal(item)} activeOpacity={0.9}>
+      <View style={styles.eventCard}>
+        <Text style={styles.eventTitle}>{item.titre}</Text>
+
+        <View style={styles.eventDetailRow}>
+          <Text style={styles.eventLabel}>📅</Text>
+          <Text style={styles.eventText}>
+            {new Date(item.date_evenement.seconds * 1000).toLocaleDateString()}
+          </Text>
+        </View>
+
+        <View style={styles.eventDetailRow}>
+          <Text style={styles.eventLabel}>📍</Text>
+          <Text style={styles.eventText}>{item.lieu}</Text>
+        </View>
+
+        <View style={styles.eventDetailRow}>
+          <Text style={styles.eventLabel}>👥</Text>
+          <Text style={styles.eventText}>Capacité : {item.capacite}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Événements</Text>
 
       <FlatList
         data={events}
@@ -162,19 +160,19 @@ export default function Event() {
               <>
                 <Text style={styles.modalTitle}>{selectedEvent.titre}</Text>
                 <Text style={styles.modalText}>
-                  Description : {selectedEvent.description}
+                  📝Description : {selectedEvent.description}
                 </Text>
                 <Text style={styles.modalText}>
-                  Date :{' '}
+                  📅Date :{' '}
                   {new Date(
                     selectedEvent.date_evenement.seconds * 1000
                   ).toLocaleString()}
                 </Text>
                 <Text style={styles.modalText}>
-                  Lieu : {selectedEvent.lieu}
+                  📍Lieu : {selectedEvent.lieu}
                 </Text>
                 <Text style={styles.modalText}>
-                  Capacité : {selectedEvent.capacite}
+                  👥Capacité : {selectedEvent.capacite}
                 </Text>
 
                 <View style={styles.modalButtons}>
@@ -210,28 +208,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#007CB0',
   },
-  itemContainer: {
-    backgroundColor: '#007CB0',
-    borderRadius: 20,
-    padding: 20,
+  eventCard: {
+    backgroundColor: '#f9f9f9',
+    borderLeftWidth: 6,
+    borderLeftColor: '#007CB0',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
     shadowRadius: 5,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    elevation: 4,
   },
-  title: {
+  eventTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 8,
-    color: 'white',
+    color: '#007CB0',
+    marginBottom: 10,
     textAlign: 'center',
   },
-  dates: {
-    fontSize: 14,
-    color: '#e0f4ff',
-    textAlign: 'center',
+  eventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  eventLabel: {
+    fontSize: 16,
+    width: 28,
+  },
+  eventText: {
+    fontSize: 15,
+    color: '#333',
   },
   modalOverlay: {
     flex: 1,
@@ -267,7 +275,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   closeButton: {
-    backgroundColor: '#aaa',
+    backgroundColor: '#E10700',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 10,
