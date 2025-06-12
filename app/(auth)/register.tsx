@@ -34,6 +34,7 @@ export default function RegisterScreen() {
         lastName,
         phone,
         email,
+        isAdmin: false,            // ⇦ rôle par défaut
         createdAt: serverTimestamp(),
       })
 

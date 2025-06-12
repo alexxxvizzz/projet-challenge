@@ -1,3 +1,6 @@
+/* app/(tabs)/studies.tsx — avec filtre de statut */
+
+import { Picker } from '@react-native-picker/picker'; // ← Picker
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {
   addDoc,
@@ -7,7 +10,7 @@ import {
   serverTimestamp,
   where,
 } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -17,79 +20,84 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+
 import { auth, db } from '../../utils/firebase';
 
-
+/* ---------- Type ---------- */
 interface Etude {
-  id: string
-  titre: string
-  description: string
-  date_debut: any
-  date_fin: any
-  date_publication: any
-  statut: string
-  id_entreprise: string
+  id: string;
+  titre: string;
+  description: string;
+  date_debut: any;
+  date_fin: any;
+  date_publication: any;
+  statut: string;
+  id_entreprise: string;
 }
-const notify = (
-  title: string,
-  message: string,
-  onOk?: () => void            // callback optionnel
-) => {
-  if (Platform.OS === 'web') {
-    // navigateur : simple window.alert
-    window.alert(`${title}\n\n${message}`);
-    onOk?.();
-  } else {
-    // mobile natif
-    Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
+
+/* ---------- Helpers ---------- */
+const notify = (title: string, message: string, onOk?: () => void) =>
+  Platform.OS === 'web'
+    ? (window.alert(`${title}\n\n${message}`), onOk?.())
+    : Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
+
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'ouverte':
+      return '#4CAF50';
+    case 'fermé':
+      return '#FF5722';
+    case 'en attente':
+    default:
+      return '#2196F3';
   }
 };
 
+/* ---------- Composant ---------- */
 export default function Studies() {
-  const [etudes, setEtudes] = useState<Etude[]>([])
-  const [selectedEtude, setSelectedEtude] = useState<Etude | null>(null)
-  const [modalVisible, setModalVisible] = useState(false)
+  const [etudes, setEtudes] = useState<Etude[]>([]);
+  const [selectedEtude, setSelectedEtude] = useState<Etude | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
+  /* ---- filtre statut ---- */
+  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
+
+  /* ---- Auth ---- */
+  useEffect(() => onAuthStateChanged(auth, setFirebaseUser), []);
+
+  /* ---- Fetch ---- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      
-    });
-    return unsub;
+    getDocs(collection(db, 'etude')).then((snap) =>
+      setEtudes(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Etude[])
+    );
   }, []);
-  
 
-  useEffect(() => {
-    const fetchEtudes = async () => {
-      const snapshot = await getDocs(collection(db, 'etude'))
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Etude[]
-      setEtudes(data)
-    }
+  /* ---- Statuts distincts ---- */
+  const statuses = useMemo(
+    () => Array.from(new Set(etudes.map((e) => e.statut))).filter(Boolean),
+    [etudes]
+  );
 
-    fetchEtudes()
-  }, [])
+  /* ---- Liste filtrée ---- */
+  const visibleEtudes =
+    selectedStatus === 'ALL' ? etudes : etudes.filter((e) => e.statut === selectedStatus);
 
+  /* ---- Handlers ---- */
   const handleOpenModal = (etude: Etude) => {
-    setSelectedEtude(etude)
-    setModalVisible(true)
-  }
-
+    setSelectedEtude(etude);
+    setModalVisible(true);
+  };
   const handleCloseModal = () => {
-    setModalVisible(false)
-    setSelectedEtude(null)
-  }
-
+    setModalVisible(false);
+    setSelectedEtude(null);
+  };
 
   const handleApply = async () => {
     if (!selectedEtude || !firebaseUser) return;
-  
-    /* --- ① vérifie si une candidature existe déjà --- */
+
     const dupQuery = query(
       collection(db, 'postuler'),
       where('id_etude', '==', selectedEtude.id),
@@ -98,10 +106,9 @@ export default function Studies() {
     const dupSnap = await getDocs(dupQuery);
     if (!dupSnap.empty) {
       notify('Déjà candidaté', 'Vous avez déjà postulé à cette étude.');
-      return; // stoppe la fonction, donc aucun addDoc
+      return;
     }
-  
-    /* --- ② sinon, on enregistre la nouvelle candidature --- */
+
     try {
       await addDoc(collection(db, 'postuler'), {
         date_postulation: serverTimestamp(),
@@ -109,77 +116,89 @@ export default function Studies() {
         id_intervenant: firebaseUser.uid,
         statut: 'en attente',
       });
-  
       notify('Candidature envoyée', 'Votre candidature est enregistrée.', handleCloseModal);
-      
-      handleCloseModal();
     } catch (e) {
       console.error(e);
       Alert.alert('Erreur', "Une erreur s'est produite ; réessaye plus tard.");
     }
   };
-  
-  
+
+  /* ---- FlatList item ---- */
   const renderItem = ({ item }: { item: Etude }) => (
-    <TouchableOpacity onPress={() => handleOpenModal(item)} activeOpacity={0.8}>
+    <TouchableOpacity onPress={() => handleOpenModal(item)} activeOpacity={0.9}>
       <View style={styles.itemContainer}>
         <Text style={styles.title}>{item.titre}</Text>
-        <Text style={styles.dates}>
-          {new Date(item.date_debut.seconds * 1000).toLocaleDateString()} →{' '}
-          {new Date(item.date_fin.seconds * 1000).toLocaleDateString()}
-        </Text>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>📅 Dates :</Text>
+          <Text style={styles.value}>
+            {new Date(item.date_debut.seconds * 1000).toLocaleDateString()} →{' '}
+            {new Date(item.date_fin.seconds * 1000).toLocaleDateString()}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.label}>📌 Statut :</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.statut) }]}>
+            <Text style={styles.statusText}>{item.statut}</Text>
+          </View>
+        </View>
       </View>
     </TouchableOpacity>
-  )
+  );
 
+  /* ---- JSX ---- */
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Études disponibles</Text>
+      {/* -------- Filtre statut -------- */}
+      <View style={styles.filterBox}>
+        <Text style={styles.filterLabel}>Statut :</Text>
+        <Picker
+          selectedValue={selectedStatus}
+          onValueChange={(value: string) => setSelectedStatus(value)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Tous" value="ALL" />
+          {statuses.map((s) => (
+            <Picker.Item key={s} label={s} value={s} />
+          ))}
+        </Picker>
+      </View>
 
       <FlatList
-        data={etudes}
+        data={visibleEtudes}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={handleCloseModal}
-      >
+      {/* ------------- Modal ------------- */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={handleCloseModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {selectedEtude && (
               <>
                 <Text style={styles.modalTitle}>{selectedEtude.titre}</Text>
+                <Text style={styles.modalText}>📝 Description : {selectedEtude.description}</Text>
                 <Text style={styles.modalText}>
-                  Description : {selectedEtude.description}
+                  🕒 Début : {new Date(selectedEtude.date_debut.seconds * 1000).toLocaleDateString()}
                 </Text>
                 <Text style={styles.modalText}>
-                  Début :{' '}
-                  {new Date(
-                    selectedEtude.date_debut.seconds * 1000,
-                  ).toLocaleDateString()}
+                  🕓 Fin : {new Date(selectedEtude.date_fin.seconds * 1000).toLocaleDateString()}
                 </Text>
-                <Text style={styles.modalText}>
-                  Fin :{' '}
-                  {new Date(
-                    selectedEtude.date_fin.seconds * 1000,
-                  ).toLocaleDateString()}
-                </Text>
-                <Text style={styles.modalText}>Statut : {selectedEtude.statut}</Text>
+                <Text style={styles.modalText}>📌 Statut : {selectedEtude.statut}</Text>
 
                 <View style={styles.modalButtons}>
                   <Pressable style={styles.closeButton} onPress={handleCloseModal}>
                     <Text style={styles.closeButtonText}>Fermer</Text>
                   </Pressable>
 
-                  <Pressable style={styles.applyButton} onPress={handleApply}>
-                  <Text style={styles.applyButtonText}>Postuler</Text>
-                  </Pressable>
-
+                  {/* 👉 N'afficher le bouton Postuler que si l'étude n'est pas fermée */}
+                  {selectedEtude.statut.toLowerCase() !== 'fermé' && (
+                    <Pressable style={styles.applyButton} onPress={handleApply}>
+                      <Text style={styles.applyButtonText}>Postuler</Text>
+                    </Pressable>
+                  )}
                 </View>
               </>
             )}
@@ -187,61 +206,39 @@ export default function Studies() {
         </View>
       </Modal>
     </View>
-  )
+  );
 }
 
+/* ---------- Styles ---------- */
 const styles = StyleSheet.create({
-  // ---- Global container ----
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingTop: 20,
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 15, paddingTop: 20 },
 
-  // ---- Header ----
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
-    color: '#007CB0',
-  },
+  /* Filtre */
+  filterBox: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  filterLabel: { fontWeight: '600', marginRight: 8, color: '#007CB0' },
+  picker: { flex: 1, height: 40 },
 
-  // ---- FlatList item ----
+  /* Carte */
   itemContainer: {
-    backgroundColor: '#007CB0',
+    backgroundColor: '#f0f9ff',
     borderRadius: 20,
     padding: 20,
     marginBottom: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
+    elevation: 3,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-    color: 'white',
-    textAlign: 'center',
-  },
-  dates: {
-    fontSize: 14,
-    color: '#e0f4ff',
-    textAlign: 'center',
-  },
+  title: { fontSize: 18, fontWeight: '700', color: '#007CB0', marginBottom: 10, textAlign: 'center' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 5 },
+  label: { fontWeight: '600', fontSize: 14, color: '#555' },
+  value: { fontSize: 14, color: '#333' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginLeft: 5 },
+  statusText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  // ---- Modal overlay ----
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-
-  // ---- Modal content ----
+  /* Modal */
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalContent: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -253,45 +250,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 10,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#007CB0' },
+  modalText: { fontSize: 16, marginBottom: 12, textAlign: 'center' },
 
-  // ---- Modal buttons ----
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  closeButton: {
-    backgroundColor: '#aaa',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  closeButtonText: {
-    color: 'white',
-    fontWeight: '700',
-  },
-  applyButton: {
-    backgroundColor: '#007CB0',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    color: 'white',
-    fontWeight: '700',
-  },
-})
+  modalButtons: { flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
+  closeButton: { backgroundColor: '#E10700', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, alignItems: 'center', marginRight: 10 },
+  closeButtonText: { color: 'white', fontWeight: '700' },
+  applyButton: { backgroundColor: '#007CB0', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, alignItems: 'center' },
+  applyButtonText: { color: 'white', fontWeight: '700' },
+});

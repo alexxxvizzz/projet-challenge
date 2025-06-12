@@ -1,20 +1,20 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    query,
-    Timestamp,
-    where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  Timestamp,
+  where,
 } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { auth, db } from '../../utils/firebase';
 
@@ -75,7 +75,7 @@ export default function History() {
           let titre = 'Événement inconnu';
           try {
             // ajuste « event » si ta collection s’appelle différemment
-            const eventSnap = await getDoc(doc(db, 'event', insc.id_event));
+            const eventSnap = await getDoc(doc(db, 'evenement', insc.id_evenement));
             if (eventSnap.exists()) {
               const evData = eventSnap.data() as any;
               titre = evData.titre ?? evData.nom ?? titre;
@@ -121,7 +121,8 @@ export default function History() {
       <View style={styles.itemContainer}>
         <Text style={styles.title}>
           {item.titre}
-          {item.type === 'event' ? ' (événement)' : ''}
+          {item.type === 'event' ? ' (événement)' : ' (étude)'}
+          
         </Text>
         <Text style={styles.meta}>
           {dateStr} • Statut : {item.statut}
