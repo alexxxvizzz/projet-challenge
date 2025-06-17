@@ -39,7 +39,7 @@ export default function RegisterScreen() {
       })
 
       // 4️⃣  Navigation
-      router.replace('/(tabs)/articles')
+      router.replace('/articles')
     } catch (e: any) {
       Alert.alert('Erreur d’inscription', e.message)
     }

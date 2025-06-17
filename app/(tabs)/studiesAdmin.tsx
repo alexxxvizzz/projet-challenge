@@ -1,4 +1,5 @@
 /* app/(tabs)/studiesAdmin.tsx */
+import { router } from 'expo-router';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {
   addDoc,
@@ -273,6 +274,17 @@ const deleteEtude = async () => {
                   <TouchableOpacity style={styles.deleteButton} activeOpacity={0.8} onPress={deleteEtude}>
                     <Text style={styles.btnTxt}>Supprimer</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+        style={styles.candidatureButton}
+        onPress={() =>
+          router.push({
+            pathname: '/postulStudies',      // ← route de la page 2
+            params: { idEtude: selectedEtude.id },
+          })
+        }
+      >
+        <Text style={styles.btnTxt}>Candidatures</Text>
+      </TouchableOpacity>
                 </View>
               </>
             )}
@@ -397,6 +409,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 6,
   },
+  candidatureButton: {            
+    backgroundColor: '#007CB0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    margin: 6,
+  },
+
 
   btnTxt: { color: '#fff', fontWeight: '700' },
 
