@@ -215,7 +215,20 @@ const deleteEtude = async () => {
     },
   ]);
 };
+const goToCandidatures = () => {
+  if (!selectedEtude) return;
 
+  const id = selectedEtude.id;   // 1️⃣ on garde l’id avant le reset
+  handleCloseModal();            // 2️⃣ on ferme la popup
+
+  // 3️⃣ on navigue au tick suivant (setTimeout 0 ms ou InteractionManager)
+  setTimeout(() => {
+    router.push({
+      pathname: '/postulStudies',
+      params: { idEtude: id },
+    });
+  }, 0);
+};
 
   /* ---------- rendu carte ---------- */
   const renderItem = ({ item }: { item: Etude }) => (
@@ -275,16 +288,11 @@ const deleteEtude = async () => {
                     <Text style={styles.btnTxt}>Supprimer</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-        style={styles.candidatureButton}
-        onPress={() =>
-          router.push({
-            pathname: '/postulStudies',      // ← route de la page 2
-            params: { idEtude: selectedEtude.id },
-          })
-        }
-      >
-        <Text style={styles.btnTxt}>Candidatures</Text>
-      </TouchableOpacity>
+                  style={styles.candidatureButton}
+                  onPress={goToCandidatures}
+                >
+                  <Text style={styles.btnTxt}>Candidatures</Text>
+                </TouchableOpacity>
                 </View>
               </>
             )}
