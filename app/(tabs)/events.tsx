@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react';
+/* ───── events.tsx – version “look 2” + filtre catégorie ───── */
+
+import { Picker } from '@react-native-picker/picker'; // ← NEW
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -8,7 +11,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -33,20 +36,14 @@ interface Evenement {
   id_entreprise: string;
   lieu: string;
   titre: string;
+  categorie: string;                // ← NEW
 }
 
-const notify = (
-  title: string,
-  message: string,
-  onOk?: () => void
-) => {
-  if (Platform.OS === 'web') {
-    window.alert(`${title}\n\n${message}`);
-    onOk?.();
-  } else {
-    Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
-  }
-};
+/* ---------- Helpers ---------- */
+const notify = (title: string, message: string, onOk?: () => void) =>
+  Platform.OS === 'web'
+    ? (window.alert(`${title}\n\n${message}`), onOk?.())
+    : Alert.alert(title, message, [{ text: 'OK', onPress: onOk }]);
 
 /* ---------- Composant ---------- */
 export default function Event() {
@@ -55,34 +52,30 @@ export default function Event() {
   const [modalVisible, setModalVisible] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
 
+  /* ----- filtre catégorie ----- */
+  const [selectedCat, setSelectedCat] = useState<string>('ALL');
+
+  /* -------- Auth -------- */
+  useEffect(() => onAuthStateChanged(auth, (u) => setFirebaseUser(u)), []);
+
+  /* -------- Fetch events -------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => setFirebaseUser(user));
-    return unsub;
+    getDocs(collection(db, 'evenement')).then((snap) =>
+      setEvents(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Evenement[])
+    );
   }, []);
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      const snapshot = await getDocs(collection(db, 'evenement'));
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Evenement[];
-      setEvents(data);
-    };
+  /* -------- catégories distinctes -------- */
+  const categories = useMemo(
+    () => Array.from(new Set(events.map((e) => e.categorie))).filter(Boolean),
+    [events]
+  );
 
-    fetchEvents();
-  }, []);
+  /* -------- liste filtrée -------- */
+  const visible =
+    selectedCat === 'ALL' ? events : events.filter((e) => e.categorie === selectedCat);
 
-  const openModal = (evt: Evenement) => {
-    setSelectedEvent(evt);
-    setModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-    setSelectedEvent(null);
-  };
-
+  /* -------- Inscription -------- */
   const handleApply = async () => {
     if (!selectedEvent || !firebaseUser) return;
 
@@ -104,15 +97,24 @@ export default function Event() {
         id_intervenant: firebaseUser.uid,
         statut: 'en attente',
       });
-
-      notify('Inscription envoyée', 'Votre inscription est enregistrée.', closeModal);
-      closeModal();
+      notify('Inscription envoyée', 'Votre inscription est enregistrée.', () => setModalVisible(false));
     } catch (e) {
       console.error(e);
       Alert.alert('Erreur', "Une erreur s'est produite lors de l'inscription.");
     }
   };
 
+  /* -------- UI handlers -------- */
+  const openModal = (evt: Evenement) => {
+    setSelectedEvent(evt);
+    setModalVisible(true);
+  };
+  const closeModal = () => {
+    setModalVisible(false);
+    setSelectedEvent(null);
+  };
+
+  /* -------- Render item -------- */
   const renderItem = ({ item }: { item: Evenement }) => (
     <TouchableOpacity onPress={() => openModal(item)} activeOpacity={0.9}>
       <View style={styles.eventCard}>
@@ -134,52 +136,59 @@ export default function Event() {
           <Text style={styles.eventLabel}>👥</Text>
           <Text style={styles.eventText}>Capacité : {item.capacite}</Text>
         </View>
+
+        <View style={styles.eventDetailRow}>
+          <Text style={styles.eventLabel}>🏷️</Text>
+          <Text style={styles.eventText}>{item.categorie}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 
+  /* -------- JSX -------- */
   return (
     <View style={styles.container}>
+      {/* -------- Filtre catégorie -------- */}
+      <View style={styles.filterBox}>
+        <Text style={styles.filterLabel}>Catégorie :</Text>
+        <Picker
+          selectedValue={selectedCat}
+          onValueChange={(value: string) => setSelectedCat(value)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Toutes" value="ALL" />
+          {categories.map((c) => (
+            <Picker.Item key={c} label={c} value={c} />
+          ))}
+        </Picker>
+      </View>
 
       <FlatList
-        data={events}
+        data={visible}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
 
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={closeModal}
-      >
+      {/* ---------- Modal ---------- */}
+      <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={closeModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {selectedEvent && (
               <>
                 <Text style={styles.modalTitle}>{selectedEvent.titre}</Text>
+                <Text style={styles.modalText}>📝Description : {selectedEvent.description}</Text>
                 <Text style={styles.modalText}>
-                  📝Description : {selectedEvent.description}
+                  📅Date : {new Date(selectedEvent.date_evenement.seconds * 1000).toLocaleString()}
                 </Text>
-                <Text style={styles.modalText}>
-                  📅Date :{' '}
-                  {new Date(
-                    selectedEvent.date_evenement.seconds * 1000
-                  ).toLocaleString()}
-                </Text>
-                <Text style={styles.modalText}>
-                  📍Lieu : {selectedEvent.lieu}
-                </Text>
-                <Text style={styles.modalText}>
-                  👥Capacité : {selectedEvent.capacite}
-                </Text>
+                <Text style={styles.modalText}>📍Lieu : {selectedEvent.lieu}</Text>
+                <Text style={styles.modalText}>👥Capacité : {selectedEvent.capacite}</Text>
+                <Text style={styles.modalText}>🏷️Catégorie : {selectedEvent.categorie}</Text>
 
                 <View style={styles.modalButtons}>
                   <Pressable style={styles.closeButton} onPress={closeModal}>
                     <Text style={styles.closeButtonText}>Fermer</Text>
                   </Pressable>
-
                   <Pressable style={styles.applyButton} onPress={handleApply}>
                     <Text style={styles.applyButtonText}>S'inscrire</Text>
                   </Pressable>
@@ -195,21 +204,40 @@ export default function Event() {
 
 /* ---------- Styles ---------- */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingTop: 20,
+  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 20 },
+
+  /* Filtre */
+  filterBox: {
+    marginBottom: 20,
+    backgroundColor: '#e1f1f9',
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  header: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    textAlign: 'center',
+  filterLabel: {
+    fontWeight: '600',
     color: '#007CB0',
+    marginRight: 8,
+    fontSize: 16,
   },
+  pickerWrapper: {
+    flex: 1,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#cce5f1',
+  },
+  picker: {
+    height: 40,
+    color: '#007CB0',
+    width: '80%',
+  },
+
+
   eventCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f0f9ff',
     borderLeftWidth: 6,
     borderLeftColor: '#007CB0',
     borderRadius: 12,
@@ -221,32 +249,12 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 4,
   },
-  eventTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#007CB0',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  eventLabel: {
-    fontSize: 16,
-    width: 28,
-  },
-  eventText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
+  eventTitle: { fontSize: 18, fontWeight: '700', color: '#007CB0', marginBottom: 10, textAlign: 'center' },
+  eventDetailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  eventLabel: { fontSize: 16, width: 28 },
+  eventText: { fontSize: 15, color: '#333' },
+
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' },
   modalContent: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -258,22 +266,10 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 10,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalText: {
-    fontSize: 16,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, textAlign: 'center', color: '#007CB0' },
+  modalText: { fontSize: 16, marginBottom: 12, textAlign: 'center' },
+
+  modalButtons: { flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
   closeButton: {
     backgroundColor: '#E10700',
     paddingVertical: 12,
@@ -282,10 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  closeButtonText: {
-    color: 'white',
-    fontWeight: '700',
-  },
+  closeButtonText: { color: 'white', fontWeight: '700' },
   applyButton: {
     backgroundColor: '#007CB0',
     paddingVertical: 12,
@@ -293,8 +286,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
   },
-  applyButtonText: {
-    color: 'white',
-    fontWeight: '700',
-  },
+  applyButtonText: { color: 'white', fontWeight: '700' },
 });

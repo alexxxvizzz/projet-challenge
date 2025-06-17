@@ -19,6 +19,7 @@ interface UserProfile {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  github?: string;
 }
 
 export default function Profile() {
@@ -29,6 +30,7 @@ export default function Profile() {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editGithub, setEditGithub] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function Profile() {
       setEditFirstName(profile.firstName ?? '');
       setEditLastName(profile.lastName ?? '');
       setEditPhone(profile.phone ?? '');
+      setEditGithub(profile.github ?? '');
     }
     setIsEditing(true);
   };
@@ -77,12 +80,14 @@ export default function Profile() {
         firstName: editFirstName,
         lastName: editLastName,
         phone: editPhone,
+        github: editGithub,
       });
       setProfile({
         ...profile,
         firstName: editFirstName,
         lastName: editLastName,
         phone: editPhone,
+        github: editGithub,
       });
       setIsEditing(false);
     } catch (e) {
@@ -116,6 +121,7 @@ export default function Profile() {
               <Field label="Prénom" value={profile?.firstName || '—'} />
               <Field label="Téléphone" value={profile?.phone || '—'} />
               <Field label="Email" value={firebaseUser.email || '—'} />
+              <Field label="Lien GitHub" value={profile?.github || '—'} />
             </View>
 
             <TouchableOpacity
@@ -192,6 +198,17 @@ export default function Profile() {
                 onChangeText={setEditPhone}
                 placeholder="Téléphone"
                 keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Lien GitHub</Text>
+              <TextInput
+                style={styles.input}
+                value={editGithub}
+                onChangeText={setEditGithub}
+                placeholder="https://github.com/monprofil"
+                autoCapitalize="none"
               />
             </View>
 

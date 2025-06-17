@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -8,6 +9,13 @@ import {
   View,
 } from 'react-native'
 
+/**
+ * Props :
+ *  - type   : 'login' | 'register'
+ *  - onSubmit :
+ *        login     → (email, password)
+ *        register  → (email, password, confirm, firstName, lastName, phone)
+ */
 export default function AuthForm({
   type,
   onSubmit,
@@ -40,13 +48,85 @@ export default function AuthForm({
     )
   }
 
-  return (
+  return type === 'register' ? (
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <AuthFields
+        type={type}
+        email={email}
+        password={password}
+        confirm={confirm}
+        firstName={firstName}
+        lastName={lastName}
+        phone={phone}
+        setEmail={setEmail}
+        setPassword={setPassword}
+        setConfirm={setConfirm}
+        setFirstName={setFirstName}
+        setLastName={setLastName}
+        setPhone={setPhone}
+        handlePress={handlePress}
+      />
+    </ScrollView>
+  ) : (
     <View style={styles.container}>
+      <AuthFields
+        type={type}
+        email={email}
+        password={password}
+        confirm={confirm}
+        firstName={firstName}
+        lastName={lastName}
+        phone={phone}
+        setEmail={setEmail}
+        setPassword={setPassword}
+        setConfirm={setConfirm}
+        setFirstName={setFirstName}
+        setLastName={setLastName}
+        setPhone={setPhone}
+        handlePress={handlePress}
+      />
+    </View>
+  )
+}
+
+function AuthFields({
+  type,
+  email,
+  password,
+  confirm,
+  firstName,
+  lastName,
+  phone,
+  setEmail,
+  setPassword,
+  setConfirm,
+  setFirstName,
+  setLastName,
+  setPhone,
+  handlePress,
+}: {
+  type: 'login' | 'register'
+  email: string
+  password: string
+  confirm: string
+  firstName: string
+  lastName: string
+  phone: string
+  setEmail: (text: string) => void
+  setPassword: (text: string) => void
+  setConfirm: (text: string) => void
+  setFirstName: (text: string) => void
+  setLastName: (text: string) => void
+  setPhone: (text: string) => void
+  handlePress: () => void
+}) {
+  return (
+    <>
       <Image
         source={{
           uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEPIHgzIIPcxP-DOsghno4c-bUS3qGjBsdcw&s',
         }}
-        style={styles.image}
+        style={styles.logo}
         resizeMode="contain"
       />
       <Text style={styles.title}>
@@ -106,55 +186,67 @@ export default function AuthForm({
         </>
       )}
 
-      <TouchableOpacity style={styles.button} onPress={handlePress}>
+      <TouchableOpacity style={styles.buttonContainer} onPress={handlePress}>
         <Text style={styles.buttonText}>
           {type === 'login' ? 'Login' : 'Register'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </>
   )
 }
 
+/* ---- Styles ---- */
 const styles = StyleSheet.create({
   container: {
+    flexGrow: 1,
     padding: 24,
-    backgroundColor: 'white',
+    backgroundColor: '#f0f8ff',
     justifyContent: 'center',
   },
-  image: {
-    width: 200,
-    height: 200,
+
+  logo: {
+    width: 150,
+    height: 150,
     alignSelf: 'center',
     marginBottom: 16,
+    borderRadius: 75,
+    overflow: 'hidden',
   },
+
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 32,
-    color: '#1E293B',
+    color: '#007CB0',
+    marginBottom: 24,
     textAlign: 'center',
   },
+
   input: {
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#cce5f1',
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
     fontSize: 16,
-    backgroundColor: '#F8FAFC',
-    color: '#0F172A',
-    
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  button: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
+
+  buttonContainer: {
+    backgroundColor: '#007CB0',
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
+
   buttonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
   },
 })
