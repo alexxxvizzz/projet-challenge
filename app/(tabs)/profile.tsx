@@ -2,9 +2,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -121,7 +122,7 @@ export default function Profile() {
               <Field label="Prénom" value={profile?.firstName || '—'} />
               <Field label="Téléphone" value={profile?.phone || '—'} />
               <Field label="Email" value={firebaseUser.email || '—'} />
-              <Field label="Lien GitHub" value={profile?.github || '—'} />
+              <Field label="Lien GitHub" value={profile?.github || '—'} isLink />
             </View>
 
             <TouchableOpacity
@@ -160,6 +161,9 @@ export default function Profile() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
+      {/* --------------------------------------------------- */}
+      {/* ⬇️ Modal d'édition du profil                          */}
+      {/* --------------------------------------------------- */}
       <Modal
         visible={isEditing}
         animationType="slide"
@@ -170,6 +174,7 @@ export default function Profile() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Modifier le profil</Text>
 
+            {/* --- Champ Nom --- */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Nom</Text>
               <TextInput
@@ -180,6 +185,7 @@ export default function Profile() {
               />
             </View>
 
+            {/* --- Champ Prénom --- */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Prénom</Text>
               <TextInput
@@ -190,6 +196,7 @@ export default function Profile() {
               />
             </View>
 
+            {/* --- Champ Téléphone --- */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Téléphone</Text>
               <TextInput
@@ -201,6 +208,7 @@ export default function Profile() {
               />
             </View>
 
+            {/* --- Champ GitHub --- */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Lien GitHub</Text>
               <TextInput
@@ -212,11 +220,13 @@ export default function Profile() {
               />
             </View>
 
+            {/* --- Email (non‑éditable) --- */}
             <View style={styles.field}>
               <Text style={styles.label}>Email :</Text>
               <Text style={styles.value}>{firebaseUser?.email}</Text>
             </View>
 
+            {/* --- Boutons du modal --- */}
             <View style={styles.modalButtonRow}>
               <TouchableOpacity
                 style={styles.modalButtonSecondary}
@@ -245,11 +255,42 @@ export default function Profile() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+interface FieldProps {
+  label: string;
+  value: string;
+  /** Si true et que la valeur ressemble à une URL, on la rend cliquable */
+  isLink?: boolean;
+}
+
+function Field({ label, value, isLink = false }: FieldProps) {
+  const isUrl = isLink && /^https?:\/\//i.test(value);
+
+  const handlePress = () => {
+    if (isUrl) {
+      Linking.openURL(value).catch((err) => console.warn('Cannot open URL', err));
+    }
+  };
+
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label} :</Text>
-      <Text style={styles.value}>{value}</Text>
+
+      {isUrl ? (
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+          <Text
+            style={[
+              styles.value,
+              { color: '#007CB0', textDecorationLine: 'underline' },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {value}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.value}>{value}</Text>
+      )}
     </View>
   );
 }
@@ -294,6 +335,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 14,
     flexWrap: 'wrap',
+    alignItems: 'center',
   },
   label: {
     fontWeight: '600',
