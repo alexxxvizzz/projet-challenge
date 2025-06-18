@@ -180,7 +180,9 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="postulStudies"
-        options={{ href: null }}
+        options={{ href: null, 
+          title: 'Candidatures',
+        }}
       />
       <Tabs.Screen
         name="History"

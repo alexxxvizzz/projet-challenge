@@ -5,6 +5,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   ScrollView,
   StyleSheet,
@@ -121,7 +122,7 @@ export default function Profile() {
               <Field label="Prénom" value={profile?.firstName || '—'} />
               <Field label="Téléphone" value={profile?.phone || '—'} />
               <Field label="Email" value={firebaseUser.email || '—'} />
-              <Field label="Lien GitHub" value={profile?.github || '—'} />
+              <Field label="Lien GitHub" value={profile?.github || '—'} isLink={true} />
             </View>
 
             <TouchableOpacity
@@ -246,11 +247,42 @@ export default function Profile() {
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+interface FieldProps {
+  label: string;
+  value: string;
+  /** Si true et que la valeur ressemble à une URL, on la rend cliquable */
+  isLink?: boolean;
+}
+
+function Field({ label, value, isLink = false }: FieldProps) {
+  const isUrl = isLink && /^https?:\/\//i.test(value);
+
+  const handlePress = () => {
+    if (isUrl) {
+      Linking.openURL(value).catch((err) => console.warn('Cannot open URL', err));
+    }
+  };
+
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label} :</Text>
-      <Text style={styles.value}>{value}</Text>
+
+      {isUrl ? (
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+          <Text
+            style={[
+              styles.value,
+              { color: '#007CB0', textDecorationLine: 'underline' },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {value}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={styles.value}>{value}</Text>
+      )}
     </View>
   );
 }

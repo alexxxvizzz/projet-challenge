@@ -1,4 +1,3 @@
-// app/_layout.tsx  (proposition complète)
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { getAuth, onAuthStateChanged, User } from 'firebase/auth';
 import { useEffect, useState } from 'react';

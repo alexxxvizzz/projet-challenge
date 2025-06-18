@@ -1,5 +1,3 @@
-/* ───── events.tsx – version “look 2” + filtre catégorie ───── */
-
 import { Picker } from '@react-native-picker/picker'; // ← NEW
 import { useEffect, useMemo, useState } from 'react';
 import {

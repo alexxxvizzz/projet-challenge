@@ -1,5 +1,3 @@
-/* app/(tabs)/articlesAdmin.tsx */
-
 import { Picker } from '@react-native-picker/picker'; /* ✅ */
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -61,6 +59,7 @@ export default function ArticlesAdmin() {
   const [fContenu, setFContenu] = useState('');
   const [fUrl, setFUrl] = useState('');
   const [fCat, setFCat] = useState('');
+  const [fDate, setFDate] = useState('');
 
   /* --- load --- */
   useEffect(() => {
@@ -82,6 +81,7 @@ export default function ArticlesAdmin() {
     setFContenu('');
     setFUrl('');
     setFCat('');
+    setFDate('');
   };
 
   const openCreate = () => {
@@ -99,6 +99,7 @@ export default function ArticlesAdmin() {
     setFContenu(selected.contenu);
     setFUrl(selected.url);
     setFCat(selected.categorie);
+    setFDate(new Date(selected.date_publication_article.seconds * 1000).toISOString().slice(0, 10));
     setIsEditing(true);
   };
 
@@ -112,8 +113,8 @@ export default function ArticlesAdmin() {
 
   /* --- CRUD --- */
   const createArticle = async () => {
-    if (!fTitre || !fAuteur || !fContenu || !fCat) {
-      notify('Champs requis', 'Titre, auteur, contenu et catégorie sont obligatoires.');
+    if (!fTitre || !fAuteur || !fContenu || !fCat || !fDate) {
+      notify('Champs requis', 'Titre, auteur, contenu, catégorie et date sont obligatoires.');
       return;
     }
     const ref = await addDoc(collection(db, 'article'), {
@@ -122,7 +123,7 @@ export default function ArticlesAdmin() {
       contenu: fContenu,
       url: fUrl,
       categorie: fCat,
-      date_publication_article: new Date(),
+      date_publication_article: new Date(fDate),
       id_entreprise: 'junior_entreprise',
     });
     setArticles((p) => [
@@ -134,7 +135,7 @@ export default function ArticlesAdmin() {
         contenu: fContenu,
         url: fUrl,
         categorie: fCat,
-        date_publication_article: new Date(),
+        date_publication_article: new Date(fDate),
         id_entreprise: 'junior_entreprise',
       },
     ]);
@@ -150,6 +151,7 @@ export default function ArticlesAdmin() {
       contenu: fContenu,
       url: fUrl,
       categorie: fCat,
+      date_publication_article: new Date(fDate),
     });
     setArticles((prev) =>
       prev.map((a) =>
@@ -303,6 +305,9 @@ export default function ArticlesAdmin() {
                   value={fContenu}
                   onChangeText={setFContenu}
                 />
+
+                <Text style={styles.labelField}>Date de publication* (YYYY-MM-DD)</Text>
+                <TextInput style={styles.input} value={fDate} onChangeText={setFDate} />
 
                 <View style={styles.btnRow}>
                   <TouchableOpacity style={styles.closeBtn} onPress={closeModal}>

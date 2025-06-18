@@ -1,4 +1,4 @@
-/* app/(tabs)/studiesAdmin.tsx */
+import { router } from 'expo-router';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {
   addDoc,
@@ -230,7 +230,20 @@ const deleteEtude = async () => {
     },
   ]);
 };
+const goToCandidatures = () => {
+  if (!selectedEtude) return;
 
+  const id = selectedEtude.id;   // 1️⃣ on garde l’id avant le reset
+  handleCloseModal();            // 2️⃣ on ferme la popup
+
+  // 3️⃣ on navigue au tick suivant (setTimeout 0 ms ou InteractionManager)
+  setTimeout(() => {
+    router.push({
+      pathname: '/postulStudies',
+      params: { idEtude: id },
+    });
+  }, 0);
+};
 
   /* ---------- rendu carte ---------- */
   const renderItem = ({ item }: { item: Etude }) => (
@@ -300,6 +313,12 @@ const deleteEtude = async () => {
                   <TouchableOpacity style={styles.deleteButton} activeOpacity={0.8} onPress={deleteEtude}>
                     <Text style={styles.btnTxt}>Supprimer</Text>
                   </TouchableOpacity>
+                     <TouchableOpacity
+                       style={styles.candidatureButton}
+                       onPress={goToCandidatures}
+                     >
+                  <Text style={styles.btnTxt}>Candidatures</Text>
+                </TouchableOpacity>
                 </View>
               </>
             )}
@@ -429,6 +448,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     margin: 6,
   },
+  candidatureButton: {            
+    backgroundColor: '#007CB0',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    margin: 6,
+  },
+
 
   btnTxt: { color: '#fff', fontWeight: '700' },
 

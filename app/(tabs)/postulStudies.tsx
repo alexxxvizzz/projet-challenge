@@ -1,17 +1,16 @@
-/* app/(tabs)/postulStudies.tsx */
 import { useLocalSearchParams } from 'expo-router';
 import { Timestamp, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { db } from '../../utils/firebase';
 
@@ -126,7 +125,6 @@ export default function PostulStudies() {
   /* ---- 7. Écran principal ---- */
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Candidatures</Text>
 
       <FlatList
         data={candidats}

@@ -1,5 +1,3 @@
-/* app/(tabs)/studies.tsx — avec filtre de statut */
-
 import { Picker } from '@react-native-picker/picker'; // ← Picker
 import { onAuthStateChanged, User } from 'firebase/auth';
 import {

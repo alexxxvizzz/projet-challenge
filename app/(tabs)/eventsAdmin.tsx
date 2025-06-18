@@ -1,5 +1,3 @@
-/* app/(tabs)/eventsAdmin.tsx */
-
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useMemo, useState } from 'react';
 import {
